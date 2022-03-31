@@ -1,11 +1,14 @@
 plugins {
     id "java"
-    //id "checkstyle"
+    id "checkstyle"
     id "maven-publish"
+    id "jacoco"
+    id "org.sonarqube" version "3.3"
     id "io.freefair.lombok" version "6.4.1"
     id "org.springframework.boot" version "2.6.3"
     id "io.spring.dependency-management" version "1.0.11.RELEASE"
     id "org.flywaydb.flyway" version "8.5.4"
+    id "org.barfuin.gradle.jacocolog" version "2.0.0" // Prints test coverage to console
 }
 
 group = "demo.springboot"
@@ -52,12 +55,6 @@ ext {
     ]
 }
 
-//configurations {
-//    compileOnly {
-//        extendsFrom annotationProcessor
-//    }
-//}
-
 dependencies {
     implementation "org.springframework.boot:spring-boot-starter"
     implementation "org.springframework.boot:spring-boot-starter-actuator"
@@ -70,9 +67,12 @@ dependencies {
     implementation "org.postgresql:postgresql:${dependencyVersion.postgresqlDriver}"
     implementation "org.modelmapper:modelmapper:${dependencyVersion.modelMapper}"
 
+    // Auto restart application during development
     developmentOnly "org.springframework.boot:spring-boot-devtools"
 
+    // Generates configuration metadata to allow IDEs to provide auto-completion.
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+    // Generate index of components to load in order to speed up startup performance
     annotationProcessor "org.springframework:spring-context-indexer"
 
     compileOnly "org.projectlombok:lombok:${dependencyVersion.lombok}"
@@ -90,6 +90,87 @@ jar {
     enabled = false
 }
 
-//tasks.named("test") {
-//    useJUnitPlatform()
-//}
+checkstyle {
+    checkstyleMain.enabled = false
+    checkstyleTest.enabled = false
+    showViolations = true
+    ignoreFailures = false
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.required = false
+        html.required = true
+        html.destination rootProject.file("$buildDir/reports/checkstyle/checkstyle-result.html")
+    }
+}
+
+// Minimum test coverage thresholds
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {counter = "LINE"; minimum = 0.5 }
+            limit {counter = "BRANCH"; minimum = 0.5 }
+            limit {counter = "COMPLEXITY"; minimum = 0.5 }
+            limit {counter = "INSTRUCTION"; minimum = 0.5 }
+            limit {counter = "METHOD"; minimum = 0.5 }
+            limit {counter = "CLASS"; minimum = 0.5 }
+        }
+    }
+}
+
+// Specify jacoco exclusions
+def jacocoExclusions = ["**/Application*", "**/*Config*"]
+jacocoTestReport {
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, excludes: jacocoExclusions)
+        }))
+    }
+}
+jacocoTestCoverageVerification {
+    inputs.files compileJava, bootBuildInfo, processResources
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, excludes: jacocoExclusions)
+        }))
+    }
+}
+
+def jacocoExecPath = "$rootDir/target/jacoco.exec"
+test {
+    useJUnitPlatform()
+    jacoco {
+        destinationFile = layout.buildDirectory.file(jacocoExecPath).get().asFile
+    }
+
+    testLogging {
+        events "PASSED", "SKIPPED", "FAILED"
+//        showStackTrace true
+        showExceptions true
+        showCauses true
+        exceptionFormat "full"
+    }
+
+    // Prints any test outcomes to the console
+//    testLogging {
+//        events "passed", "skipped", "failed"
+//        showStackTrace true
+//        showExceptions true
+//        showCauses true
+//        exceptionFormat "full"
+//    }
+}
+
+sonarqube {
+    properties {
+        property "sonar.sourceEncoding", "UTF-8"
+        property "sonar.java.coveragePlugin", "jacoco"
+        property "sonar.jacoco.reportPath", jacocoExecPath
+    }
+}
+
+// Tasks dependencies
+test.finalizedBy jacocoTestReport, jacocoTestCoverageVerification // Generate report and check coverage after test run.
+check.dependsOn jacocoTestCoverageVerification // Check includes coverage verification
+jacocoTestReport.dependsOn test // Test report includes running test.
