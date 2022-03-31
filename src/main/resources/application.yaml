@@ -1,0 +1,98 @@
+server:
+  shutdown: graceful
+  max-http-header-size: 100KB
+  port: ${APPLICATION_PORT}
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    export:
+      datadog:
+        application-key:
+
+spring:
+  application:
+    name: spring-boot-demo
+  output:
+    ansi:
+      enabled: always
+  lifecycle:
+    timeout-per-shutdown-phase: "5s" # Wait time for active requests to complete during shutdown.
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+#      naming:
+#        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: false
+    open-in-view: false # Disable OSIV (Open Session in View) for scalability.
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  mvc:
+    log-resolved-exception: off
+  flyway:
+    enabled: false
+    table: FLYWAY_HISTORY
+    group: true   # true: Group all pending migrations together in the same transaction.
+                  # false: Run all pending migrations in an individual transaction. Deafult is 'false'
+    validate-migration-naming: true
+    validate-on-migrate: true
+    baseline-on-migrate: true
+
+  datasourceone:
+    url: jdbc:postgresql://127.0.0.1:5432/primary
+    username: local-dev
+    password: local-dev
+    config:
+      connectionTimeout: 10000
+      idleTimeout: 300000
+      maximumPoolSize: 10
+      minimumIdle: 2
+      keepaliveTime: 600000
+      maxlifetime: 10000
+      validationTimeout: 10000
+      poolName: SourceOneConnectionPool
+
+  datasourcetwo:
+    url: jdbc:postgresql://127.0.0.1:5432/secondary
+    username: local-dev
+    password: local-dev
+    config:
+      connectionTimeout: 10000
+      idleTimeout: 300000
+      maximumPoolSize: 10
+      minimumIdle: 2
+      keepaliveTime: 600000
+      maxlifetime: 10000
+      validationTimeout: 10000
+      poolName: SourceTwoConnectionPool
+
+logging:
+  level:
+    root: INFO
+    org.springframework.transaction: INFO
+    org.springframework.jpa: INFO
+    org.springframework.orm.jpa: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql: INFO
+
+  pattern:
+    console: ${APPLICATION_LOG_FORMAT}
+    file: ${APPLICATION_LOG_FORMAT}
+
+# CONSTANTS
+APPLICATION_PORT: 8585
+APPLICATION_LOG_FORMAT: "%clr(%date{ISO8601}){blue}
+                        | %clr(%-5p)
+                        | %clr(${PID}){faint}
+                        | %clr([%t]){cyan}
+                        | %clr(source=${spring.application.name}){yellow} 
+                        | %clr(%logger){cyan}
+                        | %clr(X-B3-TraceId=%X{traceId}){magenta}
+                        | %clr(X-B3-SpanId=%X{spanId}){magenta}
+                        | %m%n"

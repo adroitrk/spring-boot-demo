@@ -1,0 +1,95 @@
+plugins {
+    id "java"
+    //id "checkstyle"
+    id "maven-publish"
+    id "io.freefair.lombok" version "6.4.1"
+    id "org.springframework.boot" version "2.6.3"
+    id "io.spring.dependency-management" version "1.0.11.RELEASE"
+    id "org.flywaydb.flyway" version "8.5.4"
+}
+
+group = "demo.springboot"
+description = "spring-boot-demo"
+version = "0.0.1-SNAPSHOT"
+java.sourceCompatibility = JavaVersion.VERSION_17
+java.targetCompatibility = java.sourceCompatibility
+
+// Repositories to obtain dependencies
+repositories {
+    mavenCentral()
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+}
+
+// Artefact to publish (i.e. fat jar produced by Spring Boot)
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact bootJar
+        }
+    }
+}
+
+springBoot {
+    buildInfo()
+}
+
+ext {
+    dependencyVersion = [
+            flyway: "8.5.4",
+            lombok: "1.18.22",
+            springCloud: "3.1.1",
+            springDoc: "1.6.6",
+            checkstyle: "10.1",
+            restAssured: "4.5.1",
+            junit: "5.8.2",
+            h2: "2.1.210",
+            hamcrest: "2.2",
+            mockitoInline: "4.4.0",
+            postgresqlDriver: "42.3.3",
+            modelMapper: "3.1.0"
+    ]
+}
+
+//configurations {
+//    compileOnly {
+//        extendsFrom annotationProcessor
+//    }
+//}
+
+dependencies {
+    implementation "org.springframework.boot:spring-boot-starter"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+    implementation "org.springframework.boot:spring-boot-starter-web"
+    implementation "org.springframework.boot:spring-boot-starter-validation"
+    implementation "org.springframework.cloud:spring-cloud-starter-sleuth:${dependencyVersion.springCloud}"
+    implementation "org.flywaydb:flyway-core:${dependencyVersion.flyway}"
+    implementation "org.springdoc:springdoc-openapi-ui:${dependencyVersion.springDoc}"
+    implementation "org.postgresql:postgresql:${dependencyVersion.postgresqlDriver}"
+    implementation "org.modelmapper:modelmapper:${dependencyVersion.modelMapper}"
+
+    developmentOnly "org.springframework.boot:spring-boot-devtools"
+
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+    annotationProcessor "org.springframework:spring-context-indexer"
+
+    compileOnly "org.projectlombok:lombok:${dependencyVersion.lombok}"
+    compileOnly "com.puppycrawl.tools:checkstyle:${dependencyVersion.checkstyle}"
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation "io.rest-assured:rest-assured:${dependencyVersion.restAssured}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${dependencyVersion.junit}"
+    testImplementation "com.h2database:h2:${dependencyVersion.h2}"
+    testImplementation "org.hamcrest:hamcrest:${dependencyVersion.hamcrest}"
+    testImplementation "org.mockito:mockito-inline:${dependencyVersion.mockitoInline}"
+}
+
+jar {
+    enabled = false
+}
+
+//tasks.named("test") {
+//    useJUnitPlatform()
+//}
